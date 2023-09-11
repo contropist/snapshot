@@ -1,18 +1,10 @@
-<script setup>
-import { ref, watchEffect, computed } from 'vue';
-import { useSpaceSubscription } from '@/composables/useSpaceSubscription';
-import { useFollowSpace } from '@/composables/useFollowSpace';
-import verified from '@/../snapshot-spaces/spaces/verified.json';
-import { useIntl } from '@/composables/useIntl';
-
-const props = defineProps({
-  space: Object,
-  spaceId: String
-});
+<script setup lang="ts">
+import { Space, ExtendedSpace } from '@/helpers/interfaces';
+const props = defineProps<{
+  space: Space | ExtendedSpace;
+}>();
 
 const { formatCompactNumber } = useIntl();
-
-const isVerified = computed(() => verified[props.spaceId] || 0);
 
 const {
   loading,
@@ -20,9 +12,9 @@ const {
   isSubscribed,
   loadSubscriptions,
   subscriptions
-} = useSpaceSubscription(props.spaceId);
+} = useSpaceSubscription(props.space.id);
 
-const { isFollowing } = useFollowSpace(props.space);
+const { isFollowing } = useFollowSpace(props.space.id);
 
 const notificationIcon = ref('notifications-off');
 
@@ -37,57 +29,59 @@ watchEffect(() => {
 </script>
 
 <template>
-  <div class="text-center border-b bg-skin-header-bg h-[253px]">
-    <div v-if="space">
-      <Token :space="space" symbolIndex="space" size="80" class="mt-3 mb-2" />
-      <h3 class="mb-[2px] mx-2 flex justify-center items-center">
-        <div
-          class="max-w-[70%] truncate mr-1"
-          v-tippy="{
-            content: space.name.length > 16 ? space.name : null
-          }"
-        >
-          {{ space.name }}
+  <div
+    class="relative block px-[20px] text-center md:flex md:px-3 md:pt-3 lg:block lg:pb-[24px]"
+  >
+    <div>
+      <AvatarSpace :space="space" symbol-index="space" size="48" class="mr-3" />
+      <div class="mt-2 truncate text-left">
+        <h3 class="my-0 flex items-center text-2xl leading-[44px] lg:text-lg">
+          <div
+            v-tippy="{
+              content: space.name.length > 16 ? space.name : null
+            }"
+            class="mr-1 truncate"
+          >
+            {{ space.name }}
+          </div>
+          <IconVerifiedSpace v-if="space.verified" />
+        </h3>
+        <div class="text-md text-skin-text lg:text-base">
+          {{
+            $tc('members', space.followersCount, {
+              count: formatCompactNumber(space.followersCount)
+            })
+          }}
         </div>
-        <Icon
-          v-if="isVerified === 1"
-          v-tippy="{
-            content: $t('verifiedSpace'),
-            placement: 'right'
-          }"
-          name="check"
-          size="20"
-        />
-        <Icon v-if="isVerified === -1" name="warning" size="20" />
-      </h3>
-      <div class="mb-[12px] text-color">
-        {{
-          $tc('members', space.followersCount, {
-            count: formatCompactNumber(space.followersCount)
-          })
-        }}
       </div>
     </div>
-    <div v-else class="pt-3 mb-2">
-      <div class="h-[80px] w-[80px] mx-auto lazy-loading rounded-full" />
 
-      <div
-        class="bg-skin-text h-[28px] rounded-md lazy-loading mb-2 mt-3 w-[130px] mx-auto"
+    <div
+      class="mt-3 flex w-full items-end justify-end gap-[12px] md:mt-0 lg:mt-[12px]"
+    >
+      <ButtonFollow
+        :space="space"
+        :primary="!isFollowing"
+        block
+        class="w-full md:max-w-[180px] lg:max-w-none"
       />
-      <div
-        class="bg-skin-text h-[26px] rounded-md lazy-loading w-[100px] mb-2 mx-auto"
-      />
-    </div>
-    <div class="flex justify-center gap-x-2">
-      <FollowButton :space="space" :spaceId="spaceId" />
-      <UiSidebarButton
-        class="inline"
+      <BaseButtonRound
         v-if="isFollowing"
+        class="inline shrink-0"
         @click="toggleSubscription()"
       >
-        <UiLoading v-if="loading" />
-        <Icon v-else size="20" class="link-color" :name="notificationIcon" />
-      </UiSidebarButton>
+        <LoadingSpinner v-if="loading" />
+        <BaseIcon
+          v-else
+          size="20"
+          class="text-skin-link"
+          :name="notificationIcon"
+        />
+      </BaseButtonRound>
+
+      <BaseButtonRound class="inline shrink-0 lg:hidden">
+        <SpaceSidebarMenuThreeDot class="" />
+      </BaseButtonRound>
     </div>
   </div>
 </template>

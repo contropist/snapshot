@@ -1,54 +1,66 @@
-import { ref } from 'vue';
 import { subgraphRequest } from '@snapshot-labs/snapshot.js/src/utils';
-import { lsGet } from '@/helpers/utils';
+import { useStorage } from '@vueuse/core';
 
-const proposalIds = ref([]);
-const lastSeenProposals = ref({});
+type proposal = { id: string; created: number; space: { id: string } };
 
-/**
- * Fixme: This will not work if one of the followed spaces has more than 100 proposals created before
- * other spaces had proposals.
- */
+const proposals = ref<proposal[]>([]);
+
+const lastSeenProposals = useStorage('lastSeenProposals', {});
+
 export function useUnseenProposals() {
-  async function getProposalIds(followingSpaces) {
-    if (followingSpaces[0]) {
-      try {
-        const activeProposals = await subgraphRequest(
-          `${import.meta.env.VITE_HUB_URL}/graphql`,
-          {
-            proposals: {
-              __args: {
-                first: 100,
-                where: {
-                  space_in: followingSpaces
-                }
-              },
-              id: true,
-              created: true,
-              space: {
-                id: true
+  const { followingSpaces } = useFollowSpace();
+
+  async function getProposals() {
+    if (followingSpaces.value.length === 0) return;
+    try {
+      const activeProposals = await subgraphRequest(
+        `${import.meta.env.VITE_HUB_URL}/graphql`,
+        {
+          proposals: {
+            __args: {
+              first: 200,
+              where: {
+                space_in: followingSpaces.value
               }
+            },
+            id: true,
+            created: true,
+            space: {
+              id: true
             }
           }
-        );
-        proposalIds.value = activeProposals.proposals;
-      } catch (e) {
-        console.log(e);
-      }
+        }
+      );
+      proposals.value = activeProposals.proposals;
+    } catch (e) {
+      console.log(e);
     }
   }
 
-  function updateLastSeenProposal(account) {
-    if (account) {
-      const walletId = account.slice(0, 8).toLowerCase();
-      lastSeenProposals.value = lsGet(`lastSeenProposals.${walletId}`) || {};
-    }
+  watch(followingSpaces, getProposals);
+
+  const { web3Account } = useWeb3();
+
+  function emitUpdateLastSeenProposal(spaceId: string) {
+    if (!web3Account.value || !spaceId) return;
+    lastSeenProposals.value[web3Account.value] =
+      lastSeenProposals.value[web3Account.value] || {};
+    lastSeenProposals.value[web3Account.value][spaceId] = new Date().getTime();
+  }
+
+  function spaceHasUnseenProposals(spaceId: string) {
+    return proposals.value.some(p => {
+      return (
+        p.space.id === spaceId &&
+        p.created >
+          (lastSeenProposals.value?.[web3Account.value]?.[spaceId] || 0)
+      );
+    });
   }
 
   return {
-    getProposalIds,
-    updateLastSeenProposal,
-    proposalIds,
-    lastSeenProposals
+    proposals,
+    spaceHasUnseenProposals,
+    emitUpdateLastSeenProposal
   };
 }

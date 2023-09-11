@@ -1,11 +1,6 @@
-import { computed, ref } from 'vue';
-import { useWeb3 } from '@/composables/useWeb3';
-import { useApolloQuery } from '@/composables/useApolloQuery';
 import { SUBSCRIPTIONS_QUERY } from '@/helpers/queries';
-import { useAliasAction } from '@/composables/useAliasAction';
 import { beams } from '../helpers/beams';
-import { useNotifications } from './useNotifications';
-import { useI18n } from 'vue-i18n';
+import { useFlashNotification } from './useFlashNotification';
 import client from '@/helpers/clientEIP712';
 
 const subscriptions = ref<any[] | undefined>(undefined);
@@ -14,7 +9,7 @@ export function useSpaceSubscription(spaceId: any) {
   const { web3, web3Account } = useWeb3();
   const { apolloQuery } = useApolloQuery();
   const { setAlias, aliasWallet, isValidAlias, checkAlias } = useAliasAction();
-  const { notify } = useNotifications();
+  const { notify } = useFlashNotification();
   const { t } = useI18n();
   const loading = ref(false);
   const isSubscribed = computed(() => {

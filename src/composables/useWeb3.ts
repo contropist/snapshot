@@ -1,26 +1,26 @@
-import { computed, reactive } from 'vue';
 import { Web3Provider } from '@ethersproject/providers';
 import { getInstance } from '@snapshot-labs/lock/plugins/vue3';
 import networks from '@snapshot-labs/snapshot.js/src/networks.json';
 import { formatUnits } from '@ethersproject/units';
-import { getProfiles } from '@/helpers/profile';
 
 let auth;
 const defaultNetwork: any =
   import.meta.env.VITE_DEFAULT_NETWORK || Object.keys(networks)[0];
 
-const state = reactive({
+const state = reactive<{
+  account: string;
+  network: Record<string, any>;
+  authLoading: boolean;
+  walletConnectType: string | null;
+}>({
   account: '',
   network: networks[defaultNetwork],
   authLoading: false,
-  profile: null,
-  walletConnectType: null,
-  isTrezor: false
+  walletConnectType: null
 });
 
 export function useWeb3() {
   async function login(connector = 'injected') {
-    state.isTrezor = connector === 'trezor';
     auth = getInstance();
     state.authLoading = true;
     await auth.login(connector);
@@ -35,8 +35,6 @@ export function useWeb3() {
     auth = getInstance();
     auth.logout();
     state.account = '';
-    state.profile = null;
-    state.isTrezor = false;
   }
 
   async function loadProvider() {
@@ -47,16 +45,18 @@ export function useWeb3() {
       )
         auth.provider.value.removeAllListeners();
       if (auth.provider.value.on) {
-        auth.provider.value.on('chainChanged', async chainId => {
-          handleChainChanged(parseInt(formatUnits(chainId, 0)));
-        });
-        auth.provider.value.on('accountsChanged', async accounts => {
-          if (accounts.length !== 0) {
-            state.account = accounts[0];
-            await login();
-          }
-        });
-        // auth.provider.on('disconnect', async () => {});
+        try {
+          auth.provider.value.on('chainChanged', async chainId => {
+            handleChainChanged(parseInt(formatUnits(chainId, 0)));
+          });
+          auth.provider.value.on('accountsChanged', async accounts => {
+            if (accounts.length !== 0) {
+              await login();
+            }
+          });
+        } catch (e) {
+          console.log(`failed to subscribe to events for provider: ${e}`);
+        }
       }
       console.log('Provider', auth.provider.value);
       let network, accounts;
@@ -79,14 +79,11 @@ export function useWeb3() {
       console.log('Accounts', accounts);
       handleChainChanged(network.chainId);
       const acc = accounts.length > 0 ? accounts[0] : null;
-      const profiles = await getProfiles([acc]);
 
       state.account = acc;
       state.walletConnectType = auth.provider.value?.wc?.peerMeta?.name || null;
-      state.profile = profiles[acc];
     } catch (e) {
       state.account = '';
-      state.profile = null;
       return Promise.reject(e);
     }
   }

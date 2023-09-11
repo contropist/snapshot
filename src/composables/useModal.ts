@@ -1,8 +1,6 @@
-import { ref } from 'vue';
-
-const modalOpen = ref(false);
 const modalAccountOpen = ref(false);
+const isModalPostVoteOpen = ref(false);
 
 export function useModal() {
-  return { modalOpen, modalAccountOpen };
+  return { modalAccountOpen, isModalPostVoteOpen };
 }

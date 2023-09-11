@@ -1,14 +1,18 @@
+/* eslint-env node */
+require('@rushstack/eslint-patch/modern-module-resolution');
+
 module.exports = {
   root: true,
   env: {
     node: true
   },
   extends: [
-    'plugin:vue/vue3-essential',
+    'plugin:cypress/recommended',
+    'plugin:vue/vue3-recommended',
     'eslint:recommended',
-    '@vue/typescript/recommended',
-    '@vue/prettier',
-    '@vue/prettier/@typescript-eslint'
+    '@vue/eslint-config-typescript/recommended',
+    '@vue/eslint-config-prettier/skip-formatting',
+    '.eslintrc-auto-import.json'
   ],
   ignorePatterns: ['/node_modules/**/*.*'],
   parserOptions: {
@@ -16,6 +20,7 @@ module.exports = {
   },
   rules: {
     'no-console': 'off',
+    'prefer-template': 'error',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/ban-ts-ignore': 'off',
@@ -28,6 +33,8 @@ module.exports = {
   globals: {
     $ref: 'readonly',
     defineProps: 'readonly',
-    defineEmits: 'readonly'
+    defineEmits: 'readonly',
+    withDefaults: 'readonly',
+    defineExpose: 'readonly'
   }
 };

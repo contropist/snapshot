@@ -3,10 +3,6 @@
  * returning computed properties based on current locale from i18n
  */
 
-import { computed } from 'vue';
-import { useI18n as useI18nSnapshot } from '@/composables/useI18n';
-// TODO: Resolve name conflict
-
 /**
  * This is needed since Intl still doesn't support durations:
  * https://github.com/tc39/proposal-intl-duration-format (hopefully soon!)
@@ -54,7 +50,7 @@ const getDurationAndUnit = (seconds: number) => {
 };
 
 export function useIntl() {
-  const { currentLocale } = useI18nSnapshot();
+  const { currentLocale, t } = useI18n();
 
   /**
    * functions to create computed formatters based on locale
@@ -92,7 +88,14 @@ export function useIntl() {
    */
 
   const defaultRelativeTimeFormatter = getRelativeTimeFormatter();
-  const defaultNumberFormatter = getNumberFormatter();
+  const longRelativeTimeFormatter = getRelativeTimeFormatter({
+    style: 'long',
+    numeric: 'always'
+  });
+  const defaultNumberFormatter = getNumberFormatter(
+    // format with two decimal places
+    { maximumFractionDigits: 2 }
+  );
   const compactNumberFormatter = getNumberFormatter({
     notation: 'compact',
     compactDisplay: 'short'
@@ -120,15 +123,13 @@ export function useIntl() {
   };
 
   // doesn't use Intl (yet), needs useI18n's t function, to translate the unit
-  const formatDuration = (seconds: number, t: Function) => {
+  const formatDuration = (seconds: number) => {
     const { duration, unit } = getDurationAndUnit(seconds);
 
-    return t(`timeUnits.${unit}`, { n: duration }, duration);
+    return t(`timeUnits.${unit}`, { n: duration });
   };
 
   const formatNumber = (number: number, formatter?: Intl.NumberFormat) => {
-    if (number < 0.00001) number = 0;
-
     formatter = formatter || defaultNumberFormatter.value;
 
     return formatter.format(number);
@@ -140,6 +141,39 @@ export function useIntl() {
   const formatPercentNumber = (number: number) =>
     formatNumber(number, percentNumberFormatter.value);
 
+  const getRelativeProposalPeriod = (state: any, start: any, end: any): any => {
+    if (state === 'closed') {
+      return t('endedAgo', [
+        formatRelativeTime(end, longRelativeTimeFormatter.value)
+      ]);
+    }
+    if (state === 'active') {
+      return t('endIn', [
+        formatRelativeTime(end, longRelativeTimeFormatter.value)
+      ]);
+    }
+    return t('startIn', [
+      formatRelativeTime(start, longRelativeTimeFormatter.value)
+    ]);
+  };
+
+  const getPercentFractionDigits = value => {
+    const absValue = Math.abs(value);
+
+    if (absValue === 0) {
+      return 0;
+    }
+
+    let leadingZeros = 0;
+    let tempValue = absValue;
+    while (tempValue < 1) {
+      tempValue *= 10;
+      leadingZeros++;
+    }
+
+    return Math.max(1, Math.min(leadingZeros, 8));
+  };
+
   return {
     getRelativeTimeFormatter,
     getNumberFormatter,
@@ -147,6 +181,9 @@ export function useIntl() {
     formatDuration,
     formatNumber,
     formatCompactNumber,
-    formatPercentNumber
+    formatPercentNumber,
+    getRelativeProposalPeriod,
+    getPercentFractionDigits,
+    longRelativeTimeFormatter
   };
 }

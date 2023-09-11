@@ -7,12 +7,14 @@
 [data-color-scheme='dark'] {
   color-scheme: dark;
   --primary-color: #384aff;
-  --bg-color: #121212;
+  --bg-color: #1c1b20;
   --text-color: #8b949e;
   --link-color: #ffffff;
   --heading-color: #ffffff;
-  --border-color: #424242;
-  --header-bg: #121212;
+  --border-color: #2d2d2d;
+  --header-bg: #1c1b20;
+  --block-bg: transparent;
+  --shadow-color: rgba(255, 255, 255, 0.036);
 }
 
 [data-color-scheme='light'] {
@@ -20,11 +22,12 @@
   --primary-color: #384aff;
   --bg-color: white;
   --text-color: #57606a;
-  --link-color: #111111;
+  --link-color: #444444;
   --heading-color: #111111;
-  --border-color: #d0d7de;
+  --border-color: #e0e0e0;
   --header-bg: white;
   --block-bg: transparent;
+  --shadow-color: #0001;
 }
 
 @layer base {
@@ -42,6 +45,19 @@
     font-style: normal;
   }
 
+  @font-face {
+    font-family: 'SpaceMono';
+    src: url('./assets/fonts/space-mono-v11-latin-700.woff2') format('woff2');
+  }
+
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
   h1 {
     @apply text-2xl;
   }
@@ -49,10 +65,19 @@
     @apply text-xl;
   }
   h3 {
-    @apply text-lg my-2;
+    @apply my-2 text-lg;
   }
   h4 {
     @apply text-md;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold text-skin-heading;
   }
 
   a,
@@ -60,98 +85,75 @@
   input {
     @apply transition-colors;
   }
+
+  b {
+    @apply font-semibold;
+  }
+
+  select {
+    @apply bg-skin-bg;
+  }
 }
 
 @layer utilities {
   // This allows us to use 'no-scrollbar' with Tailwind breakpoints like this 'md:no-scrollbar'
-  @variants responsive {
-    /* Chrome, Safari and Opera */
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
+  /* Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 
-    .no-scrollbar {
-      -ms-overflow-style: none; /* IE and Edge */
-      scrollbar-width: none; /* Firefox */
-    }
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
   }
 }
 
+// Don't prevent overscroll on touch devices
 @media (pointer: fine) {
   body {
     overscroll-behavior-y: none;
   }
 }
 
-* {
-  outline: none !important;
+// Tune component styles
+
+.tune-label {
+  @apply font-sans;
 }
 
-h1,
-h2,
-h3,
-h4 {
-  color: var(--heading-color);
-  font-weight: 600;
+.tune-sublabel {
+  @apply font-sans;
 }
 
-b {
-  font-weight: 600;
+.tune-button {
+  @apply rounded-full;
 }
 
-a,
-.a {
-  color: var(--link-color);
-
-  &:hover {
-    cursor: pointer;
-    text-decoration: none !important;
-  }
+.tune-input {
+  @apply rounded-full;
 }
 
-::placeholder {
-  color: var(--text-color) !important;
-  opacity: 0.6 !important;
+.tune-textarea {
+  @apply rounded-3xl px-3;
 }
 
-.input {
-  outline: none;
-  color: var(--link-color);
-  background-color: transparent;
-  border: none;
+.tune-listbox-button {
+  @apply rounded-full;
 }
 
-textarea {
-  padding-top: 16px;
-  font-size: 20px;
-  line-height: 1.4em;
+.tune-button-select {
+  @apply rounded-full;
 }
 
-::-webkit-scrollbar-thumb {
-  background-color: var(--border-color);
-  background-clip: padding-box;
-  border: 0;
-  border-radius: 0;
-
-  &:hover {
-    background-color: var(--border-color);
-  }
+.tune-input-duration {
+  @apply rounded-full;
 }
 
-.eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-size: 16px;
+.tune-error-text {
+  @apply font-sans;
 }
 
-select {
-  background-color: var(--bg-color) !important;
-}
-
-.column {
-  width: 160px;
-}
-
+// Fade transition for Vue's transition and transition-group
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
@@ -162,14 +164,29 @@ select {
   opacity: 0;
 }
 
-.bg-black {
-  background-color: var(--bg-color);
+// TODO: Move this to BaseLink components
+a,
+.a {
+  color: var(--link-color);
+
+  &:hover {
+    cursor: pointer;
+    text-decoration: none;
+  }
 }
 
-.notification {
-  color: white !important;
+// TODO: Move this and ::placeholder to a new BaseInput component
+.input {
+  @apply bg-transparent text-skin-link outline-none;
 }
 
+::placeholder {
+  color: var(--text-color);
+  opacity: 0.6 !important;
+}
+
+// TODO: Remove this and use border-skin-border in the templates. Tailwind has
+// dozens of modifiers (md:, sm:, hover: etc.) which would all need to be listed here.
 .border,
 .border-md,
 .border-lg,
@@ -177,94 +194,7 @@ select {
 .border-t,
 .border-r,
 .border-l {
-  border-color: var(--border-color);
-}
-
-.header-bg {
-  background-color: var(--header-bg) !important;
-}
-
-.bg-gray-9 {
-  background-color: var(--text-color) !important;
-}
-
-.primary-color {
-  color: var(--primary-color) !important;
-}
-
-.text-color {
-  color: var(--text-color) !important;
-}
-
-.link-color {
-  color: var(--link-color) !important;
-}
-
-.block-bg {
-  background-color: var(--block-bg) !important;
-}
-
-.bg-blue {
-  background-color: var(--primary-color) !important;
-}
-
-.tab {
-  display: inline-block;
-  &:first-letter {
-    text-transform: capitalize;
-  }
-}
-
-.extra-icon-container {
-  position: relative;
-
-  .extra-icon-off {
-    display: none;
-  }
-}
-
-.hover-border {
-  &:hover {
-    border-color: var(--link-color) !important;
-  }
-}
-
-.markdown-body blockquote {
-  color: var(--text-color);
-  border-left-color: var(--text-color);
-}
-
-.last-child-border-0:last-child {
-  border: 0 !important;
-}
-
-.sliding {
-  overflow: auto;
-  white-space: nowrap;
-}
-
-.border-color {
-  color: var(--border-color);
-}
-
-.sidenav-item {
-  &.router-link-exact-active {
-    border-left: 3px solid;
-    padding-left: 21px !important;
-  }
-}
-
-.sidenav-item {
-  &.charts-selected-tab {
-    border-bottom: 3px solid;
-  }
-}
-
-.truncated {
-  display: block;
-  white-space: nowrap; /* forces text to single line */
-  overflow: hidden;
-  text-overflow: ellipsis;
+  @apply border-skin-border;
 }
 
 input[type='number']::-webkit-inner-spin-button,
@@ -273,6 +203,23 @@ input[type='number']::-webkit-outer-spin-button {
   margin: 0;
 }
 
+input[type='time']::-webkit-calendar-picker-indicator {
+  background: none;
+  display: none;
+}
+
+// Pointer cursor for file input buttons
+input[type=file], /* FF, IE7+, chrome (except button) */
+input[type=file]::-webkit-file-upload-button {
+  /* chromes and blink button */
+  cursor: pointer;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+// V-Tippy tooltip package styling - could be moved somewhere else?
 .tippy-box[data-animation='fade'][data-state='hidden'] {
   opacity: 0;
 }
@@ -284,13 +231,13 @@ input[type='number']::-webkit-outer-spin-button {
   background-color: var(--text-color);
   color: var(--header-bg);
   border-radius: 7px;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.4;
   outline: 0;
   transition-property: transform, visibility, opacity;
-  padding: 3px 6px 4px;
+  padding: 2px 4px;
   text-align: center;
-  font-weight: 600;
+  font-weight: 500;
 }
 .tippy-box[data-placement^='top'] > .tippy-arrow {
   bottom: 0;
@@ -348,18 +295,57 @@ input[type='number']::-webkit-outer-spin-button {
   position: relative;
   padding: 5px 9px;
   z-index: 1;
+  overflow-wrap: break-word;
+}
+.tippy-box[data-theme~='urlified'] {
+  max-width: 200px;
+  white-space: pre-wrap;
+  color: var(--header-bg);
+
+  a {
+    color: var(--header-bg);
+  }
+}
+
+.lazy-loading {
+  @apply animate-pulse-fast bg-skin-border;
 }
 
 // Shot UI kit
 
 .s-input {
-  @apply text-skin-heading border border-skin-border focus-within:border-skin-link block rounded-full py-2 px-3 w-full bg-transparent;
+  @apply block w-full rounded-full border border-skin-border bg-skin-bg px-3 py-2 text-skin-link outline-none focus-within:border-skin-text;
 }
 
-.s-label {
-  @apply block mb-1;
+.s-error {
+  @apply flex items-center rounded-b-3xl bg-red px-3 pb-2 pt-4 text-sm text-white transition-all duration-200;
 }
 
-.lazy-loading {
-  @apply bg-skin-text animate-pulse-fast;
+// Fix for chrome. Overwrites tailwinds break-words class.
+// For some reason chrome doesn't break links with just overflow-wrap.
+// It also needs word-break.
+.break-words {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+// v-viewer package styling
+.viewer-backdrop {
+  background-color: rgba(0, 0, 0, 80%) !important;
+}
+
+.viewer-close {
+  scale: 1.5 !important;
+  margin-top: 50px !important;
+  margin-right: 66px !important;
+  width: 50px !important;
+  height: 50px !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 544px) {
+  .viewer-close {
+    margin-right: 50px !important;
+  }
 }

@@ -1,22 +1,30 @@
 import { createRouter, createWebHashHistory, RouteLocation } from 'vue-router';
-import Home from '@/views/Home.vue';
+
+import DelegateView from '@/views/DelegateView.vue';
+import ExploreView from '@/views/ExploreView.vue';
+import PlaygroundView from '@/views/PlaygroundView.vue';
+import SetupView from '@/views/SetupView.vue';
+import StrategyView from '@/views/StrategyView.vue';
+import TimelineView from '@/views/TimelineView.vue';
+import RankingView from '@/views/RankingView.vue';
+
+import ProfileView from '@/views/ProfileView.vue';
+import ProfileAbout from '@/views/ProfileAbout.vue';
+import ProfileActivity from '@/views/ProfileActivity.vue';
+
+import SpaceView from '@/views/SpaceView.vue';
+import SpaceProposals from '@/views/SpaceProposals.vue';
 import SpaceProposal from '@/views/SpaceProposal.vue';
 import SpaceCreate from '@/views/SpaceCreate.vue';
-import Setup from '@/views/Setup.vue';
 import SpaceSettings from '@/views/SpaceSettings.vue';
-import Explore from '@/views/Explore.vue';
-import Strategy from '@/views/Strategy.vue';
-import Playground from '@/views/Playground.vue';
-import Delegate from '@/views/Delegate.vue';
-import Timeline from '@/views/Timeline.vue';
-import Space from '@/views/Space.vue';
 import SpaceAbout from '@/views/SpaceAbout.vue';
-import SpaceProposals from '@/views/SpaceProposals.vue';
-import { useDomain } from '@/composables/useDomain';
+import SpaceTreasury from './views/SpaceTreasury.vue';
+import SpaceDelegates from './views/SpaceDelegates.vue';
+import SpaceDelegate from './views/SpaceDelegate.vue';
 
 // The frontend shows all spaces or just a single one, when being accessed
 // through that space's custom domain.
-const { domain, alias } = useDomain();
+const { domain, domainAlias } = useApp();
 const routes: any[] = [];
 
 // These routes get prefixed with the respective space's ENS domain (/:key)
@@ -33,7 +41,7 @@ const spaceRoutes = [
     component: SpaceProposal
   },
   {
-    path: 'create/:from?',
+    path: 'create/:sourceProposal?',
     name: 'spaceCreate',
     component: SpaceCreate
   },
@@ -44,9 +52,37 @@ const spaceRoutes = [
     component: SpaceAbout
   },
   {
-    path: 'settings/:from?',
+    path: 'settings',
     name: 'spaceSettings',
     component: SpaceSettings
+  },
+  {
+    path: 'treasury/:wallet?',
+    name: 'spaceTreasury',
+    component: SpaceTreasury
+  },
+  {
+    path: 'delegates',
+    name: 'spaceDelegates',
+    component: SpaceDelegates
+  },
+  {
+    path: 'delegate/:address?',
+    name: 'spaceDelegate',
+    component: SpaceDelegate
+  }
+];
+
+const profileRoutes = [
+  {
+    path: '',
+    name: 'profileActivity',
+    component: ProfileActivity
+  },
+  {
+    path: 'about/',
+    name: 'profileAbout',
+    component: ProfileAbout
   }
 ];
 
@@ -55,17 +91,16 @@ const spaceRoutes = [
 // E.g. /balancer/proposal/:proposalId becomes /proposal/:proposalId
 if (domain) {
   routes.push(
-    { path: '/', name: 'home', component: Space, children: spaceRoutes },
-    { path: '/delegate/:key?/:to?', name: 'delegate', component: Delegate },
+    { path: '/', name: 'home', component: SpaceView, children: spaceRoutes },
     {
       path: `/${domain}`,
-      alias: `/${alias ?? domain}`,
+      alias: `/${domainAlias ?? domain}`,
       name: 'home-redirect',
       redirect: '/'
     },
     {
       path: `/${domain}/:path(.*)`,
-      alias: `/${alias ?? domain}/:path(.*)`,
+      alias: `/${domainAlias ?? domain}/:path(.*)`,
       name: 'space-redirect',
       redirect: (to: RouteLocation) => ({ path: `/${to.params.path}` })
     }
@@ -74,17 +109,39 @@ if (domain) {
   // If accessed through localhost or snapshot.org, add all routes and
   // prefix space routes with space domain (/:key).
   routes.push(
-    { path: '/', name: 'home', component: Home },
-    { path: '/setup', name: 'setup', component: Setup },
-    { path: '/networks', name: 'networks', component: Explore },
-    { path: '/strategies', name: 'strategies', component: Explore },
-    { path: '/plugins', name: 'plugins', component: Explore },
-    { path: '/delegate/:key?/:to?', name: 'delegate', component: Delegate },
-    { path: '/timeline', name: 'timeline', component: Timeline },
-    { path: '/explore', name: 'explore', component: Timeline },
-    { path: '/playground/:name', name: 'playground', component: Playground },
-    { path: '/strategy/:name', name: 'strategy', component: Strategy },
-    { path: '/:key', name: 'space', component: Space, children: spaceRoutes }
+    { path: '/', name: 'home', component: ExploreView },
+    {
+      path: '/setup/:ens?',
+      name: 'setup',
+      component: SetupView
+    },
+    { path: '/timeline', name: 'timeline', component: TimelineView },
+    { path: '/ranking', name: 'ranking', component: RankingView },
+    {
+      path: '/playground/:name',
+      name: 'playground',
+      component: PlaygroundView
+    },
+    { path: '/strategy/:name', name: 'strategy', component: StrategyView },
+    {
+      path: '/profile/:address',
+      name: 'profile',
+      component: ProfileView,
+      children: profileRoutes
+    },
+    { path: '/delegate/:key?/:to?', name: 'delegate', component: DelegateView },
+    {
+      path: '/:key',
+      name: 'space',
+      component: SpaceView,
+      children: spaceRoutes,
+      beforeEnter: to => {
+        // Make sure key is lowercase
+        if (to.params.key) {
+          to.params.key = to.params.key.toLowerCase();
+        }
+      }
+    }
   );
 }
 
@@ -98,7 +155,7 @@ routes.push({
 const router = createRouter({
   history: createWebHashHistory(),
   routes,
-  scrollBehavior(to, from, savedPosition) {
+  scrollBehavior(to, _from, savedPosition) {
     if (savedPosition) {
       return savedPosition;
     }
@@ -115,5 +172,7 @@ const router = createRouter({
     return { top: 0 };
   }
 });
+
+export { routes };
 
 export default router;

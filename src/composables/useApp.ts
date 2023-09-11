@@ -1,160 +1,63 @@
-import { ref, computed, reactive } from 'vue';
-import { useRoute } from 'vue-router';
-import orderBy from 'lodash/orderBy';
 import { getInstance } from '@snapshot-labs/lock/plugins/vue3';
-import { useWeb3 } from '@/composables/useWeb3';
-import { useFollowSpace } from '@/composables/useFollowSpace';
-import networks from '@snapshot-labs/snapshot.js/src/networks.json';
-import verified from '@/../snapshot-spaces/spaces/verified.json';
-import verifiedSpacesCategories from '@/../snapshot-spaces/spaces/categories.json';
-import { useDomain } from '@/composables/useDomain';
+import domains from '@/../snapshot-spaces/spaces/domains.json';
 import aliases from '@/../snapshot-spaces/spaces/aliases.json';
-import { useApolloQuery } from '@/composables/useApolloQuery';
-import { SPACE_SKIN_QUERY } from '@/helpers/queries';
+import { getInjected } from '@snapshot-labs/lock/src/utils';
 
-const state = reactive({
-  init: false,
-  loading: false
-});
+const domainName = window.location.hostname;
+const env = import.meta.env.VITE_ENV;
+let domain = domains[domainName];
 
-const strategies = ref({});
-const explore: any = ref({});
+if (env === 'develop') {
+  domain = import.meta.env.VITE_VIEW_AS_SPACE ?? domain;
+}
 
-const { login } = useWeb3();
+const domainAlias = Object.keys(aliases).find(
+  alias => aliases[alias] === domain
+);
+
+const isReady = ref(false);
+
+// only affects small screens
+const showSidebar = ref(false);
 
 export function useApp() {
-  const route = useRoute();
-  const { followingSpaces } = useFollowSpace();
+  const { loadLocale } = useI18n();
+  const { getSkin } = useSkin();
+  const { login } = useWeb3();
 
-  async function init() {
+  function connectWallet() {
+    if (import.meta.env.VITE_E2E) return;
     const auth = getInstance();
-    state.loading = true;
-    await Promise.all([getStrategies(), getExplore(), getSkin()]);
 
-    // Auto connect with gnosis-connector when inside gnosis-safe iframe
+    // Auto connect if previous session was connected
     if (window?.parent === window)
       auth.getConnector().then(connector => {
-        if (connector) login(connector);
+        if (connector) return login(connector);
       });
-    else login('gnosis');
 
-    state.init = true;
-    state.loading = false;
+    // Auto connect with gnosis-connector when gnosis safe is detected
+    login('gnosis');
+
+    const injected = computed(() => getInjected());
+    // edge case if MM and CBW are both installed
+    if (injected.value?.id === 'metamask') return;
+    // Auto connect when coinbase wallet is detected
+    if (injected.value?.id === 'coinbase') return login('injected');
   }
 
-  async function getStrategies() {
-    const strategiesObj: any = await fetch(
-      `${import.meta.env.VITE_SCORES_URL}/api/strategies`
-    ).then(res => res.json());
-    strategies.value = strategiesObj;
-    return;
+  async function init() {
+    await loadLocale();
+    await getSkin(domain);
+    isReady.value = true;
+    connectWallet();
   }
-
-  async function getExplore() {
-    const exploreObj: any = await fetch(
-      `${import.meta.env.VITE_HUB_URL}/api/explore`
-    ).then(res => res.json());
-
-    exploreObj.spaces = Object.fromEntries(
-      Object.entries(exploreObj.spaces).map(([id, space]: any) => {
-        // map manually selected categories for verified spaces that don't have set their categories yet
-        // set to empty array if space.categories is missing
-        space.categories = space.categories?.length
-          ? space.categories
-          : verifiedSpacesCategories[id]?.length
-          ? verifiedSpacesCategories[id]
-          : [];
-
-        return [id, { id, ...space }];
-      })
-    );
-
-    explore.value = exploreObj;
-    return;
-  }
-
-  const { domain } = useDomain();
-  const { apolloQuery } = useApolloQuery();
-
-  const skin = ref('');
-
-  async function getSkin() {
-    const key = aliases[domain] || domain;
-    if (key) {
-      const spaceObj = await apolloQuery(
-        {
-          query: SPACE_SKIN_QUERY,
-          variables: {
-            id: key
-          }
-        },
-        'space'
-      );
-      skin.value = spaceObj?.skin;
-    }
-  }
-
-  const selectedCategory = ref('');
-
-  const testnetNetworks = Object.entries(networks)
-    .filter((network: any) => network[1].testnet)
-    .map(([id]) => id);
-
-  const orderedSpaces = computed(() => {
-    const network = route.query.network || '';
-    const q = route.query.q?.toString() || '';
-    const list = Object.keys(explore.value.spaces)
-      .map(key => {
-        const following = followingSpaces.value.some(s => s === key);
-        const followers = explore.value.spaces[key].followers ?? 0;
-        // const voters1d = explore.value.spaces[key].voters_1d ?? 0;
-        const followers1d = explore.value.spaces[key].followers_1d ?? 0;
-        // const proposals1d = explore.value.spaces[key].proposals_1d ?? 0;
-        const isVerified = verified[key] || 0;
-        let score = followers1d + followers / 4;
-        if (isVerified === 1) score = score * 2;
-        const testnet = testnetNetworks.includes(
-          explore.value.spaces[key].network
-        );
-        return {
-          ...explore.value.spaces[key],
-          following,
-          followers,
-          private: explore.value.spaces[key].private ?? false,
-          score,
-          testnet
-        };
-      })
-      .filter(space => !space.private && verified[space.id] !== -1)
-      .filter(space => space.network === network || !network)
-      .filter(space =>
-        JSON.stringify(space).toLowerCase().includes(q.toLowerCase())
-      );
-
-    return orderBy(
-      list,
-      ['following', 'testnet', 'score'],
-      ['desc', 'asc', 'desc']
-    );
-  });
-
-  const orderedSpacesByCategory = computed(() =>
-    orderedSpaces.value.filter(
-      space =>
-        !selectedCategory.value ||
-        (space.categories && space.categories.includes(selectedCategory.value))
-    )
-  );
 
   return {
+    domain,
+    domainAlias,
+    env,
+    isReady,
     init,
-    getExplore,
-    app: computed(() => state),
-    strategies: computed(() => strategies.value),
-    explore: computed(() => explore.value),
-    skinName: computed(() => skin.value),
-    orderedSpaces,
-    orderedSpacesByCategory,
-    selectedCategory
+    showSidebar
   };
 }

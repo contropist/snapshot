@@ -1,4 +1,3 @@
-import { ref } from 'vue';
 import { lsGet, lsSet } from '@/helpers/utils';
 import i18n, {
   defaultLocale,
@@ -9,6 +8,8 @@ import i18n, {
 const currentLocale = ref(lsGet('locale', defaultLocale));
 
 export function useI18n() {
+  const { t, d, tc } = i18n.global;
+
   async function setLocale(locale) {
     currentLocale.value = locale;
     lsSet('locale', locale);
@@ -21,5 +22,12 @@ export function useI18n() {
     setI18nLanguage(i18n, currentLocale.value);
   }
 
-  return { setLocale, loadLocale, currentLocale };
+  return {
+    t,
+    d,
+    tc,
+    setLocale,
+    loadLocale,
+    currentLocale
+  };
 }

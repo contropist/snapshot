@@ -1,71 +1,37 @@
-<script>
-import chevronIcon from '@/assets/icons/chevron.svg';
-import { useCopy } from '@/composables/useCopy';
+<script setup lang="ts">
+const { copyToClipboard } = useCopy();
 
-export default {
-  props: [
-    'open',
-    'title',
-    'number',
-    'hideRemove',
-    'showArrow',
-    'borderless',
-    'pre'
-  ],
-  emits: ['toggle'],
-  data() {
-    return { chevronIcon };
-  },
-  setup() {
-    const { copyToClipboard } = useCopy();
-    return { copyToClipboard };
-  },
-  methods: {
-    copy() {
-      const text = this.$slots.default()[0].children;
-      this.copyToClipboard(text);
-    }
-  }
-};
+defineProps<{
+  open: boolean;
+  title: string;
+  text: string;
+  hideRemove?: boolean;
+  showArrow: boolean;
+  pre?: boolean;
+}>();
+
+defineEmits(['toggle']);
 </script>
 
 <template>
-  <div
-    class="w-full text-left collapsible-container"
-    v-bind:class="{ borderless }"
+  <UiCollapsibleContent
+    :open="open"
+    :title="title"
+    :show-arrow="showArrow"
+    @toggle="$emit('toggle')"
   >
-    <div class="px-2 collapsible-header flex items-stretch">
-      <div
-        class="flex items-center flex-auto flex-nowrap ml-2"
-        @click="$emit('toggle')"
-      >
-        <span class="overflow-hidden" style="line-height: 1">
-          {{ title }}
-        </span>
-      </div>
-      <div
-        v-if="showArrow"
-        class="flex items-center cursor-pointer mr-3"
-        @click="$emit('toggle')"
-      >
-        <img
-          :src="chevronIcon"
-          alt="arrow"
-          class="arrow"
-          v-bind:class="{ rotate: open }"
-        />
-      </div>
-      <div
+    <template #icons>
+      <button
         v-if="!hideRemove"
-        class="flex items-center cursor-pointer mr-2"
-        @click="copy"
+        class="mr-2 flex cursor-pointer items-center"
+        @click="copyToClipboard(text)"
       >
-        <Icon style="color: #b2b5b2" name="copy" size="20" />
-      </div>
-    </div>
+        <BaseIcon style="color: #b2b5b2" name="copy" size="20" />
+      </button>
+    </template>
     <div
-      :class="{ hide: open, pre }"
-      class="bg-gray-200 text-black border-gray-400 border"
+      :class="{ pre }"
+      class="border border-gray-400 bg-gray-200 text-black"
       style="
         border-radius: 8px;
         margin: 0 12px 12px;
@@ -74,32 +40,12 @@ export default {
         padding: 12px;
       "
     >
-      <slot />
+      {{ text }}
     </div>
-  </div>
+  </UiCollapsibleContent>
 </template>
 
 <style scoped lang="scss">
-.collapsible-container {
-  border: 1px solid var(--border-color);
-  color: var(--link-color);
-  outline: none;
-}
-.collapsible-header {
-  cursor: pointer;
-  line-height: 46px;
-  height: 46px;
-  font-size: 18px;
-}
-.hide {
-  display: none;
-}
-.arrow {
-  width: 18px;
-}
-.rotate {
-  transform: rotate(180deg);
-}
 .pre {
   white-space: pre;
   max-height: 300px;

@@ -1,59 +1,53 @@
 <script setup>
-import { computed, onMounted, provide, watch } from 'vue';
-import { useModal } from '@/composables/useModal';
-import { useI18n } from '@/composables/useI18n';
-import { useDomain } from '@/composables/useDomain';
-import { useUserSkin } from '@/composables/useUserSkin';
-import { useApp } from '@/composables/useApp';
-import { useWeb3 } from '@/composables/useWeb3';
-import { useNotifications } from '@/composables/useNotifications';
-
-const { domain } = useDomain();
-const { loadLocale } = useI18n();
-const { modalOpen } = useModal();
-const { userSkin } = useUserSkin();
-const { init, skinName, app } = useApp();
-const { web3 } = useWeb3();
-const { notify } = useNotifications();
-
-provide('web3', web3);
-provide('notify', notify);
-
-const skin = computed(() => {
-  if (domain && skinName.value !== 'default') {
-    let skinClass = skinName.value;
-    if (userSkin.value === 'dark-mode')
-      skinClass += ` ${skinName.value}-dark-mode`;
-    return skinClass;
-  }
-  return userSkin.value;
-});
+const { domain } = useApp();
+const { init, isReady, showSidebar } = useApp();
+const route = useRoute();
+const { restorePendingTransactions } = useTxStatus();
 
 onMounted(async () => {
-  await loadLocale();
-  init();
-});
-
-watch(modalOpen, val => {
-  const el = document.body;
-  el.classList[val ? 'add' : 'remove']('overflow-hidden');
+  await init();
+  restorePendingTransactions();
 });
 </script>
 
 <template>
-  <div
-    :class="skin"
-    class="overflow-hidden pb-6 font-serif text-base min-h-screen bg-skin-bg text-skin-text antialiased"
-  >
-    <UiLoading v-if="app.loading || !app.init" class="overlay big" />
-    <div v-else>
-      <Scroller />
-      <div :class="{ 'sm:ml-[68px]': !domain }">
-        <Topnav />
-        <router-view :key="$route.path" class="flex-auto" />
+  <LoadingSpinner v-if="!isReady" class="overlay big animate-fade-in" />
+  <div v-else class="flex min-h-screen">
+    <div v-if="!domain" id="sidebar" class="flex flex-col">
+      <div
+        class="sticky top-0 z-40 h-screen overflow-hidden bg-skin-bg transition-all sm:w-[60px]"
+        :class="{ 'max-w-0 sm:max-w-none': !showSidebar }"
+      >
+        <TheSidebar class="border-r border-skin-border" />
       </div>
     </div>
-    <div id="modal" />
-    <Notifications />
+    <div
+      class="relative flex w-screen min-w-0 shrink-0 flex-col sm:w-auto sm:shrink sm:grow"
+    >
+      <div
+        class="absolute bottom-0 left-0 right-0 top-0 z-50 bg-skin-bg opacity-60"
+        :class="{ hidden: !showSidebar }"
+        @click="showSidebar = false"
+      />
+      <div
+        id="navbar"
+        class="sticky top-0 z-40 border-b border-skin-border bg-skin-bg"
+      >
+        <TheNavbar />
+      </div>
+      <div id="content" class="pb-6 pt-4">
+        <router-view v-slot="{ Component }">
+          <KeepAlive :include="['ExploreView', 'RankingView']">
+            <component :is="Component" :key="route.path" />
+          </KeepAlive>
+        </router-view>
+      </div>
+      <footer v-if="route.name === 'home'" class="mt-auto">
+        <TheFooter />
+      </footer>
+      <div id="action-bar" />
+    </div>
   </div>
+  <TheFlashNotification />
+  <TheModalNotification />
 </template>

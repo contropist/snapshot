@@ -1,5 +1,4 @@
 import { createI18n } from 'vue-i18n';
-import { nextTick } from 'vue';
 import en from '@/locales/default.json';
 import languages from '@/locales/languages.json';
 import { lsRemove } from '@/helpers/utils';
@@ -22,32 +21,13 @@ Object.keys(languages).forEach(locale => {
   if (locale.slice(0, 2) === browserLocale.slice(0, 2)) defaultLocale = locale;
 });
 
-const datetimeFormats = {
-  'en-US': {
-    short: {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric'
-    }
-  }
-};
-
 export function setI18nLanguage(i18n, locale) {
   if (i18n.mode === 'legacy') {
     i18n.global.locale = locale;
   } else {
     i18n.global.locale.value = locale;
   }
-  // @ts-ignore
-  document.querySelector('html').setAttribute('lang', locale);
-}
-
-export function setupI18n(options = { legacy: false, locale: defaultLocale }) {
-  const i18n = createI18n(options);
-  setI18nLanguage(i18n, options.locale);
-  return i18n;
+  document.querySelector('html')?.setAttribute('lang', locale);
 }
 
 export async function loadLocaleMessages(i18n, locale) {
@@ -72,12 +52,23 @@ export async function loadLocaleMessages(i18n, locale) {
   return nextTick();
 }
 
-const i18n = setupI18n({
+const i18n = createI18n({
   locale: defaultLocale,
-  // @ts-ignore
-  datetimeFormats,
+  datetimeFormats: {
+    'en-US': {
+      short: {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric'
+      }
+    }
+  },
   messages: { 'en-US': en },
   fallbackLocale: 'en-US'
 });
+
+setI18nLanguage(i18n, defaultLocale);
 
 export default i18n;

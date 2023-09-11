@@ -1,10 +1,5 @@
-import { computed, ref } from 'vue';
-import { useModal } from '@/composables/useModal';
-import { useWeb3 } from '@/composables/useWeb3';
-import { useApolloQuery } from '@/composables/useApolloQuery';
 import { getInstance } from '@snapshot-labs/lock/plugins/vue3';
 import { FOLLOWS_QUERY } from '@/helpers/queries';
-import { useAliasAction } from '@/composables/useAliasAction';
 import client from '@/helpers/clientEIP712';
 import { useSpaceSubscription } from './useSpaceSubscription';
 
@@ -19,7 +14,6 @@ export function useFollowSpace(spaceId: any = {}) {
   const { toggleSubscription, isSubscribed } = useSpaceSubscription(spaceId);
 
   const loadingFollow = ref('');
-  const hoverJoin = ref('');
 
   const followingSpaces = computed(() =>
     following.value.map((f: any) => f.space.id)
@@ -38,17 +32,15 @@ export function useFollowSpace(spaceId: any = {}) {
 
     loadingFollows.value = true;
     try {
-      Promise.all([
-        (following.value = await apolloQuery(
-          {
-            query: FOLLOWS_QUERY,
-            variables: {
-              follower_in: web3Account.value
-            }
-          },
-          'follows'
-        ))
-      ]);
+      following.value = await apolloQuery(
+        {
+          query: FOLLOWS_QUERY,
+          variables: {
+            follower_in: web3Account.value
+          }
+        },
+        'follows'
+      );
       loadingFollows.value = false;
     } catch (e) {
       loadingFollows.value = false;
@@ -96,21 +88,12 @@ export function useFollowSpace(spaceId: any = {}) {
     }
   }
 
-  // watchEffect(async () => {
-  //   (isFollowing.value = (following.value ?? []).some(
-  //     (f: any) =>
-  //       f.space.id === spaceObj?.id && f.follower === web3Account.value
-  //   )),
-  //     { deep: true };
-  // });
-
   return {
     clickFollow,
     loadFollows,
     loadingFollow: computed(() => loadingFollow.value),
     loadingFollows: computed(() => loadingFollows.value),
     isFollowing,
-    followingSpaces,
-    hoverJoin
+    followingSpaces
   };
 }

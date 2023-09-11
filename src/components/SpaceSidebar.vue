@@ -1,67 +1,24 @@
-<script setup>
-import { computed } from 'vue';
-import { getInstance } from '@snapshot-labs/lock/plugins/vue3';
-import { useWeb3 } from '@/composables/useWeb3';
+<script setup lang="ts">
+import { ExtendedSpace } from '@/helpers/interfaces';
+import SpaceSidebarSubspaces from './SpaceSidebarSubspaces.vue';
 
-const props = defineProps({
-  space: Object,
-  spaceId: String
-});
-
-const auth = getInstance();
-const { web3Account } = useWeb3();
-
-const isAdmin = computed(() => {
-  const admins = props.space?.admins?.map(address => address.toLowerCase());
-
-  return (
-    auth.isAuthenticated.value &&
-    web3Account.value &&
-    admins?.includes(web3Account.value.toLowerCase())
-  );
-});
+defineProps<{ space: ExtendedSpace }>();
 </script>
 
 <template>
-  <div style="position: fixed; width: 240px">
-    <Block :slim="true" class="overflow-hidden">
-      <SpaceSidebarHeader :space="space" :spaceId="spaceId" />
-      <div class="py-3">
-        <router-link
-          :to="{ name: 'spaceProposals', params: { key: spaceId } }"
-          v-text="$t('proposals.header')"
-          :class="
-            $route.name === 'spaceProposals' && 'router-link-exact-active'
-          "
-          class="block px-4 py-2 sidenav-item"
-        />
-        <router-link
-          :to="{ name: 'spaceCreate', params: { key: spaceId } }"
-          v-text="$t('proposals.new')"
-          class="block px-4 py-2 sidenav-item"
-        />
-        <router-link
-          v-if="
-            space &&
-            space.strategies?.find(strategy => strategy.name === 'delegation')
-          "
-          :to="{ name: 'delegate', params: { key: spaceId } }"
-          v-text="$t('delegate.header')"
-          class="block px-4 py-2 sidenav-item"
-        />
-        <router-link
-          :to="{ name: 'spaceAbout', params: { key: spaceId } }"
-          v-text="$t('about')"
-          :class="$route.name === 'spaceAbout' && 'router-link-exact-active'"
-          class="block px-4 py-2 sidenav-item"
-        />
-        <router-link
-          v-if="isAdmin"
-          :to="{ name: 'spaceSettings' }"
-          v-text="$t('settings.header')"
-          class="block px-4 py-2 sidenav-item"
-        />
+  <div class="-mt-[4px] mb-[20px] md:mt-0 lg:fixed lg:mb-0 lg:w-[240px]">
+    <BaseBlock slim class="overflow-hidden !border-t-0 md:!border-t">
+      <div class="relative lg:max-h-[calc(100vh-120px)] lg:overflow-y-auto">
+        <SpaceSidebarHeader :space="space" />
+        <SpaceSidebarNavigation :space="space" class="lg:mt-0" />
+        <SpaceSidebarSubspaces :space="space" class="hidden lg:flex" />
+        <SpaceSidebarFooter :space="space" class="hidden lg:flex" />
+        <div
+          class="absolute -top-1 right-[16px] md:right-[12px] md:top-[10px] lg:right-[10px]"
+        >
+          <SpaceSidebarMenuThreeDot class="hidden lg:block" />
+        </div>
       </div>
-    </Block>
+    </BaseBlock>
   </div>
 </template>

@@ -1,28 +1,30 @@
-<script setup>
-import { ref, computed, nextTick, toRefs, watch, onMounted } from 'vue';
-
-const props = defineProps({
-  modelValue: {
-    type: [String, Number],
-    default: ''
-  },
-  autosize: {
-    type: Boolean,
-    default: true
-  },
-  minHeight: {
-    type: [Number],
-    default: null
-  },
-  maxHeight: {
-    type: [Number],
-    default: null
-  },
-  important: {
-    type: [Boolean, Array],
-    default: false
+<script setup lang="ts">
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string | number;
+    autosize?: boolean;
+    minHeight?: number;
+    maxHeight?: number;
+    maxLength?: number;
+    placeholder?: string;
+    title?: string;
+    information?: string;
+    definition?: any;
+    isDisabled?: boolean;
+  }>(),
+  {
+    modelValue: '',
+    autosize: true,
+    placeholder: '',
+    title: '',
+    information: '',
+    definition: null,
+    minHeight: 0,
+    maxHeight: 0,
+    maxLength: undefined,
+    isDisabled: false
   }
-});
+);
 
 const emit = defineEmits(['update:modelValue']);
 
@@ -33,40 +35,20 @@ const val = ref(props.modelValue);
 // works when content height becomes more then value of the maxHeight property
 const maxHeightScroll = ref(false);
 const height = ref('auto');
-const textarea = ref(null);
-
-const isResizeImportant = computed(() => {
-  const imp = props.important;
-  return imp === true || (Array.isArray(imp) && imp.includes('resize'));
-});
-
-const isOverflowImportant = computed(() => {
-  const imp = props.important;
-  return imp === true || (Array.isArray(imp) && imp.includes('overflow'));
-});
-
-const isHeightImportant = computed(() => {
-  const imp = props.important;
-  return imp === true || (Array.isArray(imp) && imp.includes('height'));
-});
+const textarea = ref<HTMLTextAreaElement | null>(null);
 
 const computedStyles = computed(() => {
-  if (!props.autosize) return {};
-  return {
-    resize: !isResizeImportant.value ? 'none' : 'none !important',
-    height: height.value,
-    overflow: maxHeightScroll.value
-      ? 'auto'
-      : !isOverflowImportant.value
-      ? 'hidden'
-      : 'hidden !important'
-  };
+  if (minHeight.value) return `min-height: ${minHeight.value}px;`;
+  if (!props.autosize) return '';
+  return `resize: none; height: ${height.value}; overflow: ${
+    maxHeightScroll.value ? 'auto' : 'hidden'
+  }`;
 });
 
 function resize() {
-  const important = isHeightImportant.value ? 'important' : '';
-  height.value = `auto${important ? ' !important' : ''}`;
+  height.value = 'auto';
   nextTick(() => {
+    if (!textarea.value) return;
     let contentHeight = textarea.value.scrollHeight + 1;
     if (props.minHeight) {
       contentHeight =
@@ -80,10 +62,10 @@ function resize() {
         maxHeightScroll.value = false;
       }
     }
-    const heightVal = contentHeight + 'px';
-    height.value = `${heightVal}${important ? ' !important' : ''}`;
+    const heightVal = `${contentHeight}px`;
+    height.value = heightVal;
   });
-  return this;
+  return;
 }
 
 watch(modelValue, v => {
@@ -104,10 +86,21 @@ onMounted(() => resize());
 </script>
 
 <template>
+  <LabelInput v-if="title || definition?.title" :information="information">
+    {{ title ?? definition.title }}
+  </LabelInput>
   <textarea
+    v-bind="$attrs"
     ref="textarea"
-    :style="computedStyles"
     v-model="val"
+    class="!mt-1 h-auto w-full rounded-3xl border border-skin-border px-4 py-3 focus-within:!border-skin-text"
+    :class="{
+      'cursor-not-allowed': isDisabled
+    }"
+    :style="computedStyles"
+    :maxlength="maxLength"
+    :placeholder="placeholder"
+    :disabled="isDisabled"
     @focus="resize"
-  ></textarea>
+  />
 </template>

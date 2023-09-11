@@ -1,31 +1,34 @@
-<script setup>
-defineProps({
-  open: Boolean,
-  title: String,
-  number: Number,
-  hideRemove: Boolean,
-  borderless: Boolean
-});
+<script setup lang="ts">
+defineProps<{
+  open: boolean;
+  title: string;
+  number: number;
+  hideRemove: boolean;
+  borderless?: boolean;
+}>();
 
 defineEmits(['remove', 'toggle']);
 </script>
 
 <template>
-  <div class="w-full collapsible-container" v-bind:class="{ borderless }">
-    <div class="px-2 collapsible-header flex items-center">
-      <div class="mr-4 header-number">{{ number }}</div>
+  <div class="collapsible-container w-full" :class="{ borderless }">
+    <div class="collapsible-header flex items-center px-2">
+      <div v-if="number !== undefined" class="header-number mr-4">
+        {{ number }}
+      </div>
       <span
-        class="flex-auto text-center flex flex-nowrap justify-center overflow-hidden"
+        class="flex flex-auto flex-nowrap justify-center overflow-hidden text-center"
+        style="min-height: 24px"
         @click="$emit('toggle')"
       >
         {{ title }}
       </span>
       <span
         v-if="!hideRemove"
+        class="-mr-2 ml-1 cursor-pointer px-3"
         @click="$emit('remove')"
-        class="ml-1 cursor-pointer -mr-2 px-3"
       >
-        <Icon name="close" size="12" />
+        <BaseIcon name="close" size="12" />
       </span>
     </div>
 
@@ -60,6 +63,5 @@ defineEmits(['remove', 'toggle']);
   width: 32px;
   height: 32px;
   border-radius: 16px;
-  margin-top: 7px; // (46px header height - 32px element height) / 2
 }
 </style>

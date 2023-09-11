@@ -1,10 +1,8 @@
-<script setup>
-import { ref, watch } from 'vue';
-
-const props = defineProps({
-  modelValue: Object,
-  isValid: Boolean
-});
+<script setup lang="ts">
+const props = defineProps<{
+  modelValue: Record<string, unknown>;
+  isValid: boolean;
+}>();
 
 const emit = defineEmits(['update:modelValue', 'update:isValid']);
 
@@ -25,5 +23,8 @@ if (props.modelValue) input.value = JSON.stringify(props.modelValue, null, 2);
 </script>
 
 <template>
-  <TextareaAutosize v-model="input" />
+  <TextareaAutosize
+    v-model="input"
+    class="no-scrollbar w-full !overflow-x-scroll whitespace-pre font-mono text-sm"
+  />
 </template>

@@ -1,29 +1,28 @@
 import injected from '@snapshot-labs/lock/connectors/injected';
 import walletconnect from '@snapshot-labs/lock/connectors/walletconnect';
-import torus from '@snapshot-labs/lock/connectors/torus';
 import portis from '@snapshot-labs/lock/connectors/portis';
-import fortmatic from '@snapshot-labs/lock/connectors/fortmatic';
-import connectors from '@/helpers/connectors.json';
+import connectors from '@/helpers/connectors';
 import walletlink from '@snapshot-labs/lock/connectors/walletlink';
 import gnosis from '@snapshot-labs/lock/connectors/gnosis';
+import stargazer from '@snapshot-labs/lock/connectors/stargazer';
+import kaikas from '@snapshot-labs/lock/connectors/kaikas';
 
 const options: any = { connectors: [] };
 const lockConnectors = {
   injected,
   walletconnect,
-  torus,
   walletlink,
   portis,
-  fortmatic,
+  stargazer,
   gnosis,
-  trezor: injected
+  kaikas
 };
 
-Object.entries(connectors).forEach((connector: any) => {
+Object.entries(connectors).forEach(([connectorName, params]: [string, any]) => {
   options.connectors.push({
-    key: connector[0],
-    connector: lockConnectors[connector[0]],
-    options: connector[1].options
+    key: connectorName,
+    connector: lockConnectors[connectorName],
+    options: params.options
   });
 });
 

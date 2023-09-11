@@ -1,32 +1,43 @@
-import { getScores } from '@snapshot-labs/snapshot.js/src/utils';
-import voting from '@snapshot-labs/snapshot.js/src/voting';
+import { getVp, validate } from '@snapshot-labs/snapshot.js/src/utils';
 import { apolloClient } from '@/helpers/apollo';
 import { PROPOSAL_QUERY, VOTES_QUERY } from '@/helpers/queries';
+import { ExtendedSpace, Proposal, Vote } from '@/helpers/interfaces';
+import { isAddress } from '@ethersproject/address';
 import cloneDeep from 'lodash/cloneDeep';
 
 export async function getProposalVotes(
   proposalId: string,
-  { first, voter, skip }: any = { first: 20000, voter: '', skip: 0 }
-) {
+  {
+    first = 1000,
+    voter = '',
+    skip = 0,
+    space = '',
+    orderBy = 'vp',
+    orderDirection = 'desc',
+    created_gte = 0
+  } = {}
+): Promise<Vote[] | []> {
   try {
     console.time('getProposalVotes');
     const response = await apolloClient.query({
       query: VOTES_QUERY,
       variables: {
         id: proposalId,
-        orderBy: 'vp',
-        orderDirection: 'desc',
+        orderBy,
+        orderDirection,
         first,
-        voter,
-        skip
+        voter: isAddress(voter) ? voter : undefined,
+        skip,
+        space: space || undefined,
+        created_gte
       }
     });
     console.timeEnd('getProposalVotes');
     const votesResClone = cloneDeep(response);
-    return votesResClone.data.votes;
+    return votesResClone.data.votes || [];
   } catch (e) {
     console.log(e);
-    return e;
+    return [];
   }
 }
 
@@ -58,71 +69,82 @@ export async function getProposal(id) {
   }
 }
 
-export async function getResults(space, proposal, votes) {
-  try {
-    const voters = votes.map(vote => vote.voter);
-    const strategies = proposal.strategies ?? space.strategies;
-    /* Get scores */
-    if (proposal.state !== 'pending') {
-      console.time('getProposal.scores');
-      const scores = await getScores(
-        space.id,
-        strategies,
-        proposal.network,
-        voters,
-        parseInt(proposal.snapshot),
-        import.meta.env.VITE_SCORES_URL + '/api/scores'
-      );
-      console.timeEnd('getProposal.scores');
-      console.log('Got scores');
-
-      votes = votes
-        .map((vote: any) => {
-          vote.scores = strategies.map(
-            (strategy, i) => scores[i][vote.voter] || 0
-          );
-          vote.balance = vote.scores.reduce((a, b: any) => a + b, 0);
-          return vote;
-        })
-        .sort((a, b) => b.balance - a.balance)
-        .filter(vote => vote.balance > 0);
-    }
-
-    /* Get results */
-    const votingClass = new voting[proposal.type](proposal, votes, strategies);
-    const results = {
-      resultsByVoteBalance: votingClass.resultsByVoteBalance(),
-      resultsByStrategyScore: votingClass.resultsByStrategyScore(),
-      sumOfResultsBalance: votingClass.sumOfResultsBalance()
-    };
-
-    return { votes, results };
-  } catch (e) {
-    console.log(e);
-    return e;
-  }
+export async function getPower(space, address, proposal) {
+  console.log('[score] getPower');
+  const options: any = {};
+  if (import.meta.env.VITE_SCORES_URL)
+    options.url = import.meta.env.VITE_SCORES_URL;
+  return getVp(
+    address,
+    proposal.network,
+    proposal.strategies,
+    parseInt(proposal.snapshot),
+    space.id,
+    proposal.delegation === 1,
+    options
+  );
 }
 
-export async function getPower(space, address, proposal) {
-  try {
-    const strategies = proposal.strategies ?? space.strategies;
-    let scores: any = await getScores(
-      space.id,
-      strategies,
-      proposal.network,
-      [address],
-      parseInt(proposal.snapshot),
-      import.meta.env.VITE_SCORES_URL + '/api/scores'
-    );
-    scores = scores.map((score: any) =>
-      Object.values(score).reduce((a, b: any) => a + b, 0)
-    );
-    return {
-      scores,
-      totalScore: scores.reduce((a, b: any) => a + b, 0)
-    };
-  } catch (e) {
-    console.log(e);
-    return e;
+export async function voteValidation(
+  space: ExtendedSpace,
+  address: string,
+  proposal: Proposal
+): Promise<boolean> {
+  console.log('[score] getValidation');
+  const options: any = {};
+  if (import.meta.env.VITE_SCORES_URL)
+    options.url = import.meta.env.VITE_SCORES_URL;
+
+  const params = proposal.validation?.params || {};
+  if (proposal.validation.name === 'basic') {
+    params.strategies = params.strategies ?? proposal.strategies;
   }
+
+  const validateRes = await validate(
+    proposal.validation.name,
+    address,
+    space.id,
+    proposal.network,
+    parseInt(proposal.snapshot),
+    params,
+    options
+  );
+  if (typeof validateRes !== 'boolean') {
+    console.error('Vote validation failed', validateRes);
+    return false;
+  }
+  return validateRes;
+}
+
+export async function proposalValidation(
+  space: ExtendedSpace,
+  address: string
+): Promise<boolean> {
+  console.log('[score] getProposalValidation');
+  const options: any = {};
+  if (import.meta.env.VITE_SCORES_URL)
+    options.url = import.meta.env.VITE_SCORES_URL;
+
+  const params = space.validation?.params || {};
+  if (space.validation.name === 'basic') {
+    params.minScore =
+      space.validation?.params?.minScore || space.filters.minScore;
+    params.strategies =
+      space.validation?.params?.strategies || space.strategies;
+  }
+
+  const validateRes = await validate(
+    space.validation.name,
+    address,
+    space.id,
+    space.network,
+    'latest',
+    params,
+    options
+  );
+  if (typeof validateRes !== 'boolean') {
+    console.error('Proposal validation failed', validateRes);
+    return false;
+  }
+  return validateRes;
 }
